@@ -2,10 +2,10 @@
 
 1. Install virtualenv
 
-$ pip instal virtualenv --user
+run "pip install virtualenv --user" on the command line
 
 2. Run make to set up dev environment
 
-$ make
+run "make" on the command line
 
 That should be it!
