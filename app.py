@@ -109,7 +109,7 @@ def query_patient():
     #just works for 3 for initial testing, gotta figure out how to set up return statement better
     return jsonify({'1': patient_list[0], '2': patient_list[1], '3': patient_list[2]})
 
-@app.route('/query_transaction/<int:transaction_id>', methods['GET'])
+@app.route('/query_transaction/<int:transaction_id>', methods=['GET'])
 def query_transaction():
     trans = Transaction.query.get(transaction_id)
     if trans is None:
