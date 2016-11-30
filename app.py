@@ -1,139 +1,195 @@
-#!flask/bin/python
-from flask import Flask, jsonify, abort, make_response, request
-from flask_sqlalchemy import SQLAlchemy
+#!/usr/bin/python
+from flask import Flask, jsonify, abort, make_response, request, render_template
+import psycopg2
 from datetime import datetime
+from twilio.rest import TwilioRestClient
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'impharm.c8sfa07wbzip.us-west-2.rds.amazonaws.com:5432'
-db = SQLAlchemy(app)
 
-class Drug(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True)
-    quantity = db.Column(db.Integer)
-    transactions = db.relationship('Transaction', backref='drug_id')
+conn_string = "host='impharm.c8sfa07wbzip.us-west-2.rds.amazonaws.com' dbname='pharm' user='pharmacist' password='pharmacist'"
+conn = psycopg2.connect(conn_string)
+cursor = conn.cursor()
 
-    def __init__(self, name, quantity):
-        self.name = name
-        self.quantity = quantity
+# XXX OUT BEFORE PUBLIC PUSH
+account_sid = "ACc6ff8b8c0b4becff5903dc12815677c8"
+auth_token = "8ff5dfef459fa32a58a8934e4a19b7c7"
+client = TwilioRestClient(account_sid, auth_token)
 
-    def __repr__(self):
-        return '<Drug Name %r, Quantity %r>' % (self.name, self.quantity)
-
-class Transaction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer)
-    drug_id = db.Column(db.Integer, db.ForeignKey('drug.id'))
-    quantity = db.Column(db.Integer)
-    date = db.Column(db.DateTime)
-
-    def __init__(self, patient_id, drug_id, quantity):
-        self.patient_id = patient_id
-        self.drug_id = drug_id
-        self.quantity = quantity
-        self.date = datetime.datetime.now()
-
-    def __repr__(self):
-        return '<Patient ID %r, Drug ID %r, Quantity %r, Date %r>' % (self.patient_id, self.drug_id, self.quantity, self.date)
-
-"""
-do we need to intialize the db, or will it all be sitting fancily in aws?
-@app.route('/initialize')
-def initialize_db():
-    db.create_all()
-"""
-
-@app.route('/list_drugs', methods=['GET'])
-def list_drugs():
-    drugs_list = Drug.query.all()
+@app.route('/dbview/', methods=['GET'])
+def view_db():
+    cursor.execute("SELECT * FROM drug")
+    drugs_list = cursor.fetchall()
     if len(drugs_list) == 0:
         abort(404)
-    #just works for 3 for initial testing, gotta figure out how to set up return statement better
-    return jsonify({'1': drugs_list[0], '2': drugs_list[1], '3': drugs_list[2]})
+    drugs_formatted = []
+    for i in range(len(drugs_list)):
+        drugs_formatted.append({'drug_id': drugs_list[i][0],
+                                'name': drugs_list[i][1],
+                                'quantity': drugs_list[i][2],
+                                'price': drugs_list[i][3],
+                                'minimum': drugs_list[i][4]
+                                })
+    cursor.execute("SELECT * FROM transaction")
+    transactions_list = cursor.fetchall()
+    if len(transactions_list) == 0:
+        abort(404)
+    transactions_formatted = []
+    for i in range(len(transactions_list)):
+        cursor.execute("SELECT * FROM patient WHERE id in ('%s')" % (transactions_list[i][1]))
+        patient = cursor.fetchall()[0]
+        cursor.execute("SELECT * FROM drug WHERE id in ('%s')" % (transactions_list[i][3]))
+        drug = cursor.fetchall()[0]
+        transactions_formatted.append({'transaction_id': transactions_list[i][0],
+                                       'patient_name': patient[1],
+                                       'date': transactions_list[i][2],
+                                       'drug_name': drug[1],
+                                       'quantity': transactions_list[i][4]
+                                       })
+    ret = []
+    ret.append(drugs_formatted)
+    ret.append(transactions_formatted)
+    #message = client.messages.create(to="+15033200439", from_="+15102579863", body="Test!")
+    return render_template('demo.html', ret=ret)
+
+@app.route('/dbview/', methods=['POST'])
+def post_db():
+    if not request.json or not 'drug_name' in request.json or not 'quantity' in request.json or not 'patient_id' in request.json:
+        abort(400)
+    cursor.execute("SELECT * FROM transaction WHERE name IN ('%s')" % (request.json['drug_name']))
+    drug = cursor.fetchall()[0]
+    if drug is None:
+        abort(404)
+    if drug[2] - request.json['quantity'] < 0:
+        abort(409)
+    new_quantity = drug[2] - request.json['quantity']
+    cursor.execute("UPDATE drug SET quantity = %s WHERE id = %s", (new_quantity, drug[0]))
+    cursor.execute("INSERT INTO transaction (patient_id, drug_name) VALUES ('%s', %s)" % (request.json['patient_id'], drug[1]))
+    conn.commit()
+    return jsonify({'transaction_id': new_trans.id, 'patient_id': new_trans.patient_id, 'drug_name': drug.name, 'quantity': new_trans.quantity}), 201
+
+@app.route('/ordersview/', methods=['GET'])
+def view_orders():
+    cursor.execute("SELECT * FROM order")
+    order_list = cursor.fetchall()
+    if len(order_list) == 0:
+        abort(404)
+    ret = []
+    for i in range(len(order_list)):
+        ret.append({'id': order_list[i][0],
+                    'date': order_list[i][1],
+                    'drug_id': order_list[i][2],
+                    'quantity': order_list[i][3]
+                    })
+    return jsonify(ret)
+
+@app.route('/list_drugs/', methods=['GET'])
+def list_drugs():
+    cursor.execute("SELECT * FROM drug")
+    drugs_list = cursor.fetchall()
+    if len(drugs_list) == 0:
+        abort(404)
+    ret = []
+    for i in range(len(drugs_list)):
+        ret.append({'id': drugs_list[i][0],
+                    'name': drugs_list[i][1],
+                    'quantity': drugs_list[i][2],
+                    'price': drugs_list[i][3],
+                    'minimum': drugs_list[i][4]
+                    })
+    return jsonify(ret)
 
 @app.route('/query_drug/', methods=['GET'])
 def query_drug():
-    if not request.json or not 'name' in request.json:
-        abort(400)
-    drug = Drug.query.filter_by(name=request.json['name']).first()
+    cursor.execute("SELECT * FROM drug WHERE name IN ('%s')" % (request.json['name']))
+    drug = cursor.fetchall()[0]
     if drug is None:
         abort(404)
-    return jsonify({'drug_id': drug.id, 'name': drug.name, 'quantity': drug.quantity})
+    return jsonify({'id': drug[0],
+                    'name': drug[1],
+                    'quantity': drug[2],
+                    'price': drug[3],
+                    'minimum':drug[4],
+                    })
 
-@app.route('/add_drug/<int:quantity>', methods=['POST'])
+@app.route('/add_drug/', methods=['POST'])
 def add_drug():
-    if not request.json or not 'name' in request.json:
+    if not request.json or not 'name' in request.json or not 'quantity' in request.json or not 'price' in request.json:
         abort(400)
-    new_drug = Drug(request.json['name'], quantity)
-    db.session.add(new_drug)
-    db.session.commit()
-    return jsonify({'drug_id': new_drug.id, 'name': new_drug.name, 'quantity': new_drug.quantity}), 201
+    cursor.execute("INSERT INTO drug (name, quantity, price, minimum) VALUES ('%s', %s, %s, 0)" % (request.json['name'], request.json['quantity'], request.json['price']))
+    conn.commit()
+    return jsonify({'result': True}), 201
 
-@app.route('/increase_drug_quantity/<int:quantity>', methods=['PUT'])
+@app.route('/change_drug_quantity/', methods=['PUT'])
 def increase_drug_quantity():
-    if not request.json or not 'name' in request.json:
+    if not request.json or not 'name' in request.json or not 'quantity' in request.json:
         abort(400)
-    drug = Drug.query.filter_by(name=request.json['name']).first()
+    cursor.execute("SELECT * FROM drug WHERE name IN ('%s')" % (request.json['name']))
+    drug = cursor.fetchall()[0]
     if drug is None:
         abort(404)
-    updated_drug = Drug(request.json['name'], drug.quantity + quantity)
-    db.session.delete(drug)
-    db.session.add(updated_drug)
-    db.session.commit()
-    return jsonify({'drug_id': updated_drug.id, 'name': updated_drug.name, 'quantity': updated_drug.quantity})
+    new_quantity = drug[2] + request.json['quantity']
+    cursor.execute("UPDATE drug SET quantity = %s WHERE name = %s", (new_quantity, request.json['name']))
+    conn.commit()
+    return jsonify({'drug_id': drug[0],
+                    'name': drug[1],
+                    'quantity': new_quantity,
+                    'minimum': drug[3]
+                    })
 
-@app.route('/delete_drug', methods=['DELETE'])
+@app.route('/delete_drug/', methods=['DELETE'])
 def delete_drug():
     if not request.json or not 'name' in request.json:
         abort(400)
-    drug = Drug.query.filter_by(drug_name=request.json['name'])
+    cursor.execute("SELECT * FROM drug WHERE name IN ('%s')" % (request.json['name']))
+    drug = cursor.fetchall()[0]
     if drug is None:
         abort(404)
-    db.session.delete(drug)
-    db.session.commit()
+    cursor.execute("DELETE FROM drug WHERE name = '%s'" % (request.json['name']))
+    conn.commit()
     return jsonify({'result': True})
 
-@app.route('/list_transactions', methods=['GET'])
+@app.route('/list_transactions/', methods=['GET'])
 def list_transactions():
-    trans_list = Transaction.query.all()
-    if len(trans_list) == 0:
+    cursor.execute("SELECT * FROM transaction")
+    transactions_list = cursor.fetchall()
+    if len(transactions_list) == 0:
         abort(404)
-    #just works for 3 for initial testing, gotta figure out how to set up return statement better
-    return jsonify({'1': trans_list[0], '2': trans_list[1], '3': trans_list[2]})
+    ret = []
+    for i in range(len(transactions_list)):
+        ret.append({'id': transactions_list[i][0],
+                    'patient_id': transactions_list[i][1],
+                    'date': transactions_list[i][2]
+                    })
+    return jsonify(ret)
 
-@app.route('/query_patient/<int:patient_id>', methods=['GET'])
-def query_patient():
-    patient_list = Transaction.query.filter_by(patient_id=patient_id).all()
-    if len(patient_list) == 0:
-        abort(404)
-    #just works for 3 for initial testing, gotta figure out how to set up return statement better
-    return jsonify({'1': patient_list[0], '2': patient_list[1], '3': patient_list[2]})
-
-@app.route('/query_transaction/<int:transaction_id>', methods=['GET'])
+@app.route('/query_transaction/', methods=['GET'])
 def query_transaction():
-    trans = Transaction.query.get(transaction_id)
-    if trans is None:
-        abort(404)
-    drug = Drug.query.get(trans.drug_id)
-    return jsonify({'transaction_id': trans.id, 'patient_id': trans.patient_id, 'drug_name': drug.name, 'quantity': trans.quantity}), 201
-
-@app.route('/make_transaction/<int:patient_id>/<int:quantity>', methods=['POST'])
-def add_transaction():
-    if not request.json or not 'drug_name' in request.json:
-        abort(400)
-    drug = Drug.query.filter_by(name=request.json['drug_name']).first()
+    cursor.execute("SELECT * FROM transaction WHERE name IN ('%s')" % (request.json['name']))
+    transaction = cursor.fetchall()[0]
     if drug is None:
         abort(404)
-    if drug.quantity - quantity < 0:
+    return jsonify({'id': drug[0],
+                    'patient_id': drug[1],
+                    'date':drug[2],
+                    })
+
+@app.route('/make_transaction/', methods=['POST'])
+def add_transaction():
+    if not request.json or not 'drug_name' in request.json or not 'quantity' in request.json or not 'patient_id' in request.json:
+        abort(400)
+    cursor.execute("SELECT * FROM transaction WHERE name IN ('%s')" % (request.json['drug_name']))
+    drug = cursor.fetchall()[0]
+    if drug is None:
+        abort(404)
+    if drug[2] - request.json['quantity'] < 0:
         abort(409)
-    new_trans = Transaction(patient_id, drug.id, quantity)
-    updated_drug = Drug(drug.name, drug.quantity - quantity)
-    db.session.add(new_trans)
-    db.session.delete(drug)
-    db.session.add(updated_drug)
-    db.session.commit()
+    new_quantity = drug[2] - request.json['quantity']
+    cursor.execute("UPDATE drug SET quantity = %s WHERE id = %s", (new_quantity, drug[0]))
+    cursor.execute("INSERT INTO transaction (patient_id, drug_name) VALUES ('%s', %s)" % (request.json['patient_id'], drug[1]))
+    conn.commit()
     return jsonify({'transaction_id': new_trans.id, 'patient_id': new_trans.patient_id, 'drug_name': drug.name, 'quantity': new_trans.quantity}), 201
 
+"""
 @app.route('/update_transaction_quantity/<int:transaction_id>/<int:quantity>', methods=['PUT'])
 def update_transaction_quantity():
     trans = Transaction.query.get(transaction_id)
@@ -161,7 +217,7 @@ def delete_transaction():
     db.session.add(new_drug)
     db.session.commit()
     return jsonify({'result': True})
-
+"""
 @app.errorhandler(400)
 def incorrect_request(error):
     return make_response(jsonify({'error': 'Incorrect request, make sure formatting is proper'}), 400)

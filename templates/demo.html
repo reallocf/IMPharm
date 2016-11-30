@@ -107,74 +107,32 @@
  
   <script type="text/javascript">
 
-	test_data =	
-					[
-						 {
-						   "id": 1, 
-						   "minimum": 5, 
-						   "name": "codeine", 
-						   "price": 100, 
-						   "quantity": 1000, 
-						   "supplier_id": 555
-						 }, 
-						 {
-						   "id": 2, 
-						   "minimum": 9, 
-						   "name": "New Drug", 
-						   "price": 75, 
-						   "quantity": 50, 
-						   "supplier_id": 21
-						 }, 
-						 {
-						   "id": 3, 
-						   "minimum": 30, 
-						   "name": "Test Drug", 
-						   "price": "$59.00", 
-						   "quantity": 67, 
-						   "supplier_id": 555
-						 }, 
-						 {
-						   "id": 8, 
-						   "minimum": 67, 
-						   "name": "test", 
-						   "price": "$100.00", 
-						   "quantity": 100, 
-						   "supplier_id": 333
-						 }, 
-						 {
-						   "id": 9, 
-						   "minimum": 134, 
-						   "name": "test", 
-						   "price": "$100.00", 
-						   "quantity": 100, 
-						   "supplier_id": 999
-						 }, 
-						 {
-						   "id": 10, 
-						   "minimum": 45, 
-						   "name": "test", 
-						   "price": "$100.00", 
-						   "quantity": 100, 
-						   "supplier_id": 962
-						 }
-						]
-		
-		for (var i = 0; i < test_data.length; i++)
+	var sample = {{ret|tojson}}
+
+	console.log(sample[1][0])
+
+	inventory_data = sample[0]
+	transaction_data = sample[1]
+	for (var i = 0; i < transaction_data.length; i++)
 		{
 			$('#transaction').append(
 				'<tr id="tans_row">' + 
-					'<td id="tans_row">' + test_data[i].name + '</td>' +
-					'<td id="tans_row">' + test_data[i].minimum + '</td>' +
-					'<td id="tans_row">' + test_data[i].price + '</td>' +
-					'<td id="tans_row">' + test_data[i].quantity + '</td>' +
+					'<td id="tans_row">' + transaction_data[i].transaction_id + '</td>' +
+					'<td id="tans_row">' + transaction_data[i].patient_name + '</td>' +
+					'<td id="tans_row">' + transaction_data[i].drug_name + '</td>' +
+					'<td id="tans_row">' + transaction_data[i].quantity + '</td>' +
+					'<td id="tans_row">' + transaction_data[i].date + '</td>' +
 				'</tr id="tans_row">'
 			)
+		}
+	for (var i = 0; i < sample[1].length; i++)
+		{
 			$('#inventory').append(
 				'<tr id="inv_row">' +
-					'<td id="inv_row">' + test_data[i].name + '</td>' +
-					'<td id="inv_row">' + test_data[i].minimum + '</td>' +
-					'<td id="inv_row">' + test_data[i].price + '</td>' +
-					'<td id="inv_row">' + test_data[i].quantity + '</td>' +
+					'<td id="inv_row">' + inventory_data[i].name + '</td>' +
+					'<td id="inv_row">' + inventory_data[i].minimum + '</td>' +
+					'<td id="inv_row">' + inventory_data[i].quantity + '</td>' +
+					'<td id="inv_row">' + inventory_data[i].quantity + '</td>' +
 				'<tr>'
 			)
 		}
