@@ -6,11 +6,12 @@ from twilio.rest import TwilioRestClient
 
 app = Flask(__name__)
 
+# XXX out secure things after demo!!
+
 conn_string = "host='impharm.c8sfa07wbzip.us-west-2.rds.amazonaws.com' dbname='pharm' user='pharmacist' password='pharmacist'"
 conn = psycopg2.connect(conn_string)
 cursor = conn.cursor()
 
-# XXX OUT BEFORE PUBLIC PUSH
 account_sid = "ACc6ff8b8c0b4becff5903dc12815677c8"
 auth_token = "8ff5dfef459fa32a58a8934e4a19b7c7"
 client = TwilioRestClient(account_sid, auth_token)
