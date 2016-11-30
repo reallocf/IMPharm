@@ -96,7 +96,7 @@ def post_db():
     cursor.execute("UPDATE drug SET quantity = %s WHERE id = %s" % (new_quantity, drug[0]))
     cursor.execute("INSERT INTO transaction (patient_id, date, drug_id, quantity) VALUES (%s, current_timestamp, %s, %s)" % (patient[0], drug[0], int(request.form['quantity'])))
     if drug[2] - int(request.form['quantity']) < drug[4]:
-        order_amount = ((drug[4] / 7) * 3) - (drug[2] / 3)
+        order_amount = abs(((drug[4] / 7) * 3) - (drug[2] / 3))
         cursor.execute('INSERT INTO "order" (date, drug_id, quantity, fufiled) VALUES (current_timestamp, %s, %s, %s)' % (drug[0], order_amount, False))
     	message = client.messages.create(to="+14129533098", from_="+15102579863", body="Hey, it's IMPharm. We have ordered %s on your behalf becuase you were running low. Have a good day!" % (drug[1]))
         conn.commit()
@@ -108,19 +108,11 @@ def post_db():
 
 @app.route('/ordersview/', methods=['GET'])
 def view_orders():
-    cursor.execute('SELECT * FROM "order"')
+    cursor.execute('SELECT drug.name, "order"."date", "order".quantity, drug.price * "order".quantity AS "total" FROM "order" INNER JOIN drug ON "order".drug_id = drug.id')
     orders_list = cursor.fetchall()
     if len(orders_list) == 0:
         abort(404)
-    ret = []
-    for i in range(len(orders_list)):
-        ret.append({'id': orders_list[i][0],
-                    'date': orders_list[i][1],
-                    'drug_id': orders_list[i][2],
-                    'quantity': orders_list[i][3],
-                    'fulfilled': orders_list[i][4]
-                    })
-    return jsonify(ret)
+    return render_template('ordersview.html', ret=orders_list)
 
 @app.route('/list_drugs/', methods=['GET'])
 def list_drugs():

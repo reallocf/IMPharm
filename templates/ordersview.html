@@ -1,0 +1,102 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>IMPharm</title>
+  <meta name="IMPharm" content="Pharmacy inventory as a service">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+  <style>
+  	table {
+  		font-family: arial, sans-serif;
+  		border-collapse: collapse;
+  		width: 75%;
+  		padding: 25px;
+  		background: white;
+  	}
+
+  	td, th {
+  		border:1px solid #dddddd;
+  		text-align: left;
+  		padding: 8px;
+  	}
+  	h1, h3 {
+  		font-family: arial, sans-serif;
+  		width: 70%;
+  		text-align: left;
+  	}
+  	h2 {
+  		font-family: arial, sans-serif;
+  		width: 70%;
+  		text-align: left;
+  	}
+  	#top_header {
+  		padding-top: 5px;
+  	}
+  	#bar {
+  		background: #e6e6e6;
+  		padding: 10px;
+  	}
+
+  </style>
+</head>
+
+<body>  
+	<div align='center'>
+
+		<h1>IMPharm</h1>
+		<h3>Orders Page</h3>
+		
+		<div id='bar'>
+			<div id='innerbar'>
+				<a id='link' href="/dbview">Inventory</a>
+				<a id='link' href="/ordersview">Orders</a>
+			</div>
+		</div>
+			<h2 id='top_header'>Orders</h2>
+			<div>	
+				<table id="orders">
+					<tr>
+				  		<th>Drug Name</th>
+				  		<th>Order Quantity</th>
+				  		<th>Cost</th>
+				  		<th>Date</th>
+				  	</tr>
+				</table>
+			</div>
+	
+	</div>
+ 
+  <script type="text/javascript">
+
+	var sample = {{ret|tojson}}
+	console.log(sample);
+	
+	for (var i = 0; i < sample.length; i++)
+		{
+			$('#orders').append(
+				'<tr id="tans_row">' + 
+					'<td id="tans_row">' + sample[i][0] + '</td>' +
+					'<td id="tans_row">' + sample[i][2] + '</td>' +
+					'<td id="tans_row">' + sample[i][3] + '</td>' +
+					'<td id="tans_row">' + sample[i][1] + '</td>' +
+				'</tr id="tans_row">'
+			)
+		}
+		$(function(){
+			var filtered_trans = [];
+			$('#button').on('click', function() {
+				for (var i = 0; i < test_data.length; i++)
+				{	
+				  	if (test_data[i].name == 'test')
+						filtered_trans.push(test_data[i])
+				}
+				console.log(filtered_trans);			
+			})
+		}())
+
+  </script>
+</body>
+</html>
