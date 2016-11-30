@@ -2,20 +2,20 @@
 
 1.Install virtualenv
 
-$ pip install virtualenv --user
-
+pip install virtualenv --user
 
 2.Install brew if you don't have it. If you do have it, continue to next step.
 
-$ cd /Volumes/Storage/goinfre/your-user-name
-$ git clone https://github.com/Homebrew/homebrew.git
-$ export PATH=/Volumes/Storage/goinfre/your-user-name/homebrew/bin:${PATH}
-$ brew update
+cd /Volumes/Storage/goinfre/your-user-name
+git clone https://github.com/Homebrew/homebrew.git
+export PATH=/Volumes/Storage/goinfre/your-user-name/homebrew/bin:${PATH}
+brew update
+
 now return to this folder (the one you just cloned) to proceed
 
 3.Run make to set up dev environment
 
-$ make
+make
 
 To run app.py:
 
@@ -25,8 +25,8 @@ Instead,
 
 1.Change access rights of app.py
 
-$ chmod a+x app.py
+chmod a+x app.py
 
 2.Run app.py as an executable
 
-$ ./app.py
+./app.py
