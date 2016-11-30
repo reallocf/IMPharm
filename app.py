@@ -1,8 +1,9 @@
 #!/usr/bin/python
-from flask import Flask, jsonify, abort, make_response, request, render_template
+from flask import Flask, jsonify, abort, make_response, request, render_template, redirect
 import psycopg2
-from datetime import date
+import datetime
 from twilio.rest import TwilioRestClient
+import smtplib
 
 app = Flask(__name__)
 
@@ -15,6 +16,30 @@ cursor = conn.cursor()
 account_sid = "ACc6ff8b8c0b4becff5903dc12815677c8"
 auth_token = "8ff5dfef459fa32a58a8934e4a19b7c7"
 client = TwilioRestClient(account_sid, auth_token)
+
+
+def format_msg(orders):
+    email_msg = "Order ID	Date					Drug ID		Quantity	Fulfiled\n"
+    for i in orders:
+        for j in i:
+            email_msg += str(j)
+            email_msg += "		"
+        email_msg += str("\n")
+    send_email(email_msg)
+
+def grab_orders():
+    cursor.execute('SELECT * FROM "order"')
+    orders = cursor.fetchall()
+    format_msg(orders)
+
+def send_email(msg):
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.starttls()
+    s.login("throw586plus1@gmail.com", "password123!")
+    i = 0
+    s.sendmail("throw586plus1@gmail.com", "z.smith32@gmail.com", msg)
+    s.quit()
+
 
 @app.route('/dbview/', methods=['GET'])
 def view_db():
@@ -53,31 +78,37 @@ def view_db():
 
 @app.route('/addData/', methods=['POST'])
 def post_db():
-    if not request.form or not 'drug_name' in request.form or not 'quantity' in request.form or not 'patient_id' in request.form:
+    if not request.form or not 'drug_name' in request.form or not 'quantity' in request.form or not 'patient_name' in request.form:
         abort(400)
-    cursor.execute("SELECT * FROM drug")
-    drugs_list = cursor.fetchall()
-    if (len(drugs_list) == 0):
+    cursor.execute("SELECT * FROM drug WHERE name = '%s'" % (request.form['drug_name']))
+    drug = cursor.fetchall()[0]
+    if (drug is None):
         abort(404)
-    i = 0
-    while i in range(len(drugs_list)):
-        if drugs_list[i][1] == request.form['drug_name']:
-            drug = drugs_list[i]
-            break
-        i += 1
-    #if drug[2] - int(request.form['quantity']) < drug[4]:
-    #    abort(409)
-    	#who we texting? Make sure to add them as a verified number on twilio
-    	#message = client.messages.create(to="+15033200439", from_="+15102579863", body="Test!")
+    cursor.execute("SELECT * FROM patient WHERE name = '%s'" % (request.form['patient_name']))
+    patients = cursor.fetchall()
+    if (len(patients) == 0):
+        cursor.execute("INSERT INTO patient (name) VALUES ('%s')" % (request.form['patient_name']))
+        cursor.execute("SELECT * FROM patient WHERE name = '%s'" % (request.form['patient_name']))
+        patient = cursor.fetchall()[0]
+    else:
+        patient  = patients[0]
     new_quantity = drug[2] - int(request.form['quantity'])
-    cursor.execute("UPDATE drug SET quantity = %s WHERE id = %s", (new_quantity, drug[0]))
-    cursor.execute("INSERT INTO transaction (patient_id, date, drug_id, quantity) VALUES (%s, NULL, %s, %s)" % (int(request.form['patient_id']), drug[0], int(request.form['quantity'])))
-    conn.commit()
-    return jsonify({'result': True}), 201
+    cursor.execute("UPDATE drug SET quantity = %s WHERE id = %s" % (new_quantity, drug[0]))
+    cursor.execute("INSERT INTO transaction (patient_id, date, drug_id, quantity) VALUES (%s, current_timestamp, %s, %s)" % (patient[0], drug[0], int(request.form['quantity'])))
+    if drug[2] - int(request.form['quantity']) < drug[4]:
+        order_amount = ((drug[4] / 7) * 3) - (drug[2] / 3)
+        cursor.execute('INSERT INTO "order" (date, drug_id, quantity, fufiled) VALUES (current_timestamp, %s, %s, %s)' % (drug[0], order_amount, False))
+    	message = client.messages.create(to="+14129533098", from_="+15102579863", body="Hey, it's IMPharm. We have ordered %s on your behalf becuase you were running low. Have a good day!" % (drug[1]))
+        conn.commit()
+        grab_orders()
+        return redirect("http://127.0.0.1:5000/ordersview/")
+    else:
+        conn.commit()
+        return redirect("http://127.0.0.1:5000/dbview/")
 
 @app.route('/ordersview/', methods=['GET'])
 def view_orders():
-    cursor.execute("SELECT * FROM order")
+    cursor.execute('SELECT * FROM "order"')
     orders_list = cursor.fetchall()
     if len(orders_list) == 0:
         abort(404)

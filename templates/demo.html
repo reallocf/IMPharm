@@ -63,8 +63,7 @@
 		<h3>Inventory management as a service</h3>
 		<div id='form_div'>
 			<form action="/addData/" method="post">
-				Patient Id: <input type="number" name="patient_id">
-
+				Patient Name: <input type="text" name="patient_name">
 				Drug Name: <input type="text" name="drug_name">
 				Quantity: <input type="number" name="quantity">
 				<button type="submit" name="submit">submit</button>
@@ -90,10 +89,10 @@
 			  	<h2>Inventory</h2>
 			  	<table id="inventory">
 			  		<tr>
-			  			<th>Inventory</th>
 			  			<th>Drug</th>
-			  			<th>Quantity</th>
-			  			<th>Emergency Order Flag</th>
+			  			<th>Inventory</th>
+			  			<th>Price</th>
+			  			<th>Order Threshold</th>
 			  		</tr>
 			  	</table>
 			</div>
@@ -129,9 +128,9 @@
 			$('#inventory').append(
 				'<tr id="inv_row">' +
 					'<td id="inv_row">' + inventory_data[i].name + '</td>' +
+					'<td id="inv_row">' + inventory_data[i].quantity + '</td>' +
+					'<td id="inv_row">' + inventory_data[i].price + '</td>' +
 					'<td id="inv_row">' + inventory_data[i].minimum + '</td>' +
-					'<td id="inv_row">' + inventory_data[i].quantity + '</td>' +
-					'<td id="inv_row">' + inventory_data[i].quantity + '</td>' +
 				'<tr>'
 			)
 		}
