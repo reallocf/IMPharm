@@ -62,11 +62,12 @@
 		<h1>IMPharm</h1>
 		<h3>Inventory management as a service</h3>
 		<div id='form_div'>
-			<form action=/addData>
-				Name: <input type="text" name="name">
-				Drug: <input type="text" name="name">
-				Quantity: <input type="number" name="quantitu">
-				<input type="submit" name="submit">
+			<form action="/addData/" method="post">
+				Patient Id: <input type="number" name="patient_id">
+
+				Drug Name: <input type="text" name="drug_name">
+				Quantity: <input type="number" name="quantity">
+				<button type="submit" name="submit">submit</button>
 			</form>
 		</div>
 		<div id='button'>
@@ -109,8 +110,6 @@
 
 	var sample = {{ret|tojson}}
 
-	console.log(sample[1][0])
-
 	inventory_data = sample[0]
 	transaction_data = sample[1]
 	for (var i = 0; i < transaction_data.length; i++)
@@ -125,7 +124,7 @@
 				'</tr id="tans_row">'
 			)
 		}
-	for (var i = 0; i < sample[1].length; i++)
+	for (var i = 0; i < inventory_data.length; i++)
 		{
 			$('#inventory').append(
 				'<tr id="inv_row">' +
