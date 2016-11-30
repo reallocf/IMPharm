@@ -1,4 +1,5 @@
 set_up:
+	brew install postgres
 	pip install flask --user
 	pip install psycopg2 --user
 	pip install twilio --user
