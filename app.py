@@ -7,14 +7,12 @@ import smtplib
 
 app = Flask(__name__)
 
-# XXX out secure things after demo!!
-
-conn_string = "host='impharm.c8sfa07wbzip.us-west-2.rds.amazonaws.com' dbname='pharm' user='pharmacist' password='pharmacist'"
+conn_string = "host='X' dbname='X' user='X' password='X'"
 conn = psycopg2.connect(conn_string)
 cursor = conn.cursor()
 
-account_sid = "ACc6ff8b8c0b4becff5903dc12815677c8"
-auth_token = "8ff5dfef459fa32a58a8934e4a19b7c7"
+account_sid = "X"
+auth_token = "X"
 client = TwilioRestClient(account_sid, auth_token)
 
 
@@ -35,9 +33,9 @@ def grab_orders():
 def send_email(msg):
     s = smtplib.SMTP('smtp.gmail.com', 587)
     s.starttls()
-    s.login("throw586plus1@gmail.com", "password123!")
+    s.login("X", "X")
     i = 0
-    s.sendmail("throw586plus1@gmail.com", "z.smith32@gmail.com", msg)
+    s.sendmail("X", "X", msg)
     s.quit()
 
 
